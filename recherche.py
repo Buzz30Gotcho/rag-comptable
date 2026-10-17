@@ -8,7 +8,7 @@ conn = psycopg.connect("postgresql://rag:rag@localhost:5432/rag")
 register_vector(conn)
 
 # 1. Vectoriser la question (c'est le seul calcul de vecteur à faire)
-question = "Combien ai-je payé à Bureau Plus ?"
+question = input("Ta question : ")
 vecteur_question = np.array(vectoriser(question))
 
 # 2. Demander à PostgreSQL les 3 morceaux les plus proches
@@ -32,6 +32,10 @@ print(f"Question : {question}\n")
 for m in morceaux_tries:
     print(f"{m['score']:.3f} | {m['fichier']} (page {m['page']})")
 
+
+# On garde seulement les morceaux à moins de 0,08 du meilleur score
+meilleur_score = morceaux_tries[0]["score"]
+morceaux_tries = [m for m in morceaux_tries if m["score"] >= meilleur_score - 0.08]
 import ollama
 
 # 5. Construire le contexte à partir des 3 meilleurs morceaux
@@ -41,8 +45,11 @@ for m in morceaux_tries[:3]:
 
 # 6. Construire le prompt
 prompt = f"""Tu es un assistant comptable. Réponds à la question en te basant UNIQUEMENT sur les extraits ci-dessous.
-Cite les sources utilisées (nom du fichier).
-Si les extraits ne permettent pas de répondre, dis-le clairement.
+Règles :
+- Ignore les extraits qui n'ont pas de rapport avec la question.
+- Commence par la réponse, en une ou deux phrases, puis donne le détail du calcul si besoin.
+- Termine par la liste des fichiers sources utilisés.
+- Si les extraits ne permettent vraiment pas de répondre, dis-le clairement.
 
 Extraits :
 {contexte}
