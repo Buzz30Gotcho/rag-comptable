@@ -48,6 +48,8 @@ Règles :
 - Commence par la réponse, en une ou deux phrases, puis donne le détail du calcul si besoin.
 - Termine par la liste des fichiers sources utilisés.
 - Si les extraits ne permettent vraiment pas de répondre, dis-le clairement.
+- Le montant payé correspond toujours au Total TTC. Ne retire jamais la TVA, sauf si on te demande explicitement le montant HT.
+- Ignore les extraits qui n'ont pas de rapport avec la question.
 
 Extraits :
 {contexte}
@@ -58,7 +60,8 @@ print("\n===== RÉPONSE =====")
 for morceau in ollama.chat(
     model="llama3.2",
     messages=[{"role": "user", "content": prompt}],
-    options={"num_thread": 4},
+    options={"num_thread": 4,"temperature":0},
+    
     stream=True,
 ):
     print(morceau["message"]["content"], end="", flush=True)
