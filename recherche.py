@@ -1,7 +1,7 @@
 import numpy as np
 import psycopg
 from pgvector.psycopg import register_vector
-
+import ollama
 from vecteur import vectoriser
 
 conn = psycopg.connect("postgresql://rag:rag@localhost:5432/rag")
@@ -28,21 +28,19 @@ morceaux_tries = [
     {"fichier": l[0], "page": l[1], "contenu": l[2], "score": l[3]} for l in lignes
 ]
 
+# 4. Garder seulement les morceaux proches du meilleur score
+meilleur_score = morceaux_tries[0]["score"]
+morceaux_tries = [m for m in morceaux_tries if m["score"] >= meilleur_score - 0.05]
+
 print(f"Question : {question}\n")
 for m in morceaux_tries:
     print(f"{m['score']:.3f} | {m['fichier']} (page {m['page']})")
 
-
-# On garde seulement les morceaux à moins de 0,08 du meilleur score
-meilleur_score = morceaux_tries[0]["score"]
-morceaux_tries = [m for m in morceaux_tries if m["score"] >= meilleur_score - 0.08]
-import ollama
-
-# 5. Construire le contexte à partir des 3 meilleurs morceaux
+# 5. Construire le contexte à partir des morceaux retenus
 contexte = ""
-for m in morceaux_tries[:3]:
+for m in morceaux_tries:
     contexte += f"[Source : {m['fichier']}, page {m['page']}]\n{m['contenu']}\n\n"
-
+    
 # 6. Construire le prompt
 prompt = f"""Tu es un assistant comptable. Réponds à la question en te basant UNIQUEMENT sur les extraits ci-dessous.
 Règles :
@@ -55,8 +53,13 @@ Extraits :
 {contexte}
 Question : {question}"""
 
-# 7. Envoyer le prompt à llama3
+# 7. Envoyer le prompt à llama3.2
 print("\n===== RÉPONSE =====")
-for morceau in ollama.chat(model="llama3.2", messages=[{"role": "user", "content": prompt}], stream=True):
+for morceau in ollama.chat(
+    model="llama3.2",
+    messages=[{"role": "user", "content": prompt}],
+    options={"num_thread": 4},
+    stream=True,
+):
     print(morceau["message"]["content"], end="", flush=True)
 print()
