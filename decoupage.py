@@ -6,18 +6,30 @@
 # |   3 repris    |      7 nouveaux     |   = 10 au total (la taille)
 
 
-from ast import main
-
 
 def decouper(texte, taille, chevauchement):
-    morceaux=[]
-    for i in range(0,len(texte), taille-chevauchement):
-        morceaux.append(texte[i:i+taille])
-        if (i+taille >= len(texte)):
+    morceaux = []
+    debut = 0
+    while debut < len(texte):
+        fin = debut + taille
+
+        # Si on n'est pas à la fin du texte, on recule jusqu'au dernier espace
+        if fin < len(texte):
+            espace = texte.rfind(" ", debut, fin)
+            if espace != -1:
+                fin = espace
+
+        morceaux.append(texte[debut:fin])
+
+        if fin >= len(texte):
             break
+        debut = fin - chevauchement
+        espace = texte.find(" ", debut)
+        if espace != -1:
+            debut = espace + 1
+
     return morceaux
 
 if __name__ == "__main__":
-    resultat = decouper("Total TTC : 293.40 EUR", 10, 3)
-    for morceau in resultat:
-        print(repr(morceau))
+    for m in decouper("Les frais de repas engagés lors d'un déplacement professionnel", 20, 5):
+        print(m)
