@@ -1,6 +1,7 @@
 import ollama
 import math
 
+
 def similarite(v1, v2):
     produit = sum(a * b for a, b in zip(v1, v2))
     norme1 = math.sqrt(sum(a * a for a in v1))
@@ -12,6 +13,7 @@ def vectoriser(texte, modele="bge-m3"):
     reponse = ollama.embed(model=modele, input=texte)
     return reponse["embeddings"][0]
 
+# plus le score se rapproche de 1, plus les deux textes ont un sens proche.
 
 if __name__ == "__main__":
     question = vectoriser("Combien dois-je payer ?")
