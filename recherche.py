@@ -1,27 +1,36 @@
-from lire_pdf import charger_morceaux
-from vecteur import vectoriser, similarite
+import numpy as np
+import psycopg
+from pgvector.psycopg import register_vector
 
-# 1. Charger les morceaux et calculer le vecteur de chacun
-morceaux = charger_morceaux()
-for m in morceaux:
-    m["vecteur"] = vectoriser(m["contenu"])          # trou 1 : quel texte vectoriser ?
+from vecteur import vectoriser
 
-# 2. Vectoriser la question
+conn = psycopg.connect("postgresql://rag:rag@localhost:5432/rag")
+register_vector(conn)
+
+# 1. Vectoriser la question (c'est le seul calcul de vecteur à faire)
 question = "Combien ai-je payé à Bureau Plus ?"
-vecteur_question = vectoriser(question)
+vecteur_question = np.array(vectoriser(question))
 
-# 3. Calculer le score de chaque morceau par rapport à la question
-for m in morceaux:
-    m["score"] = similarite(vecteur_question, m["vecteur"])    # trous 2 et 3 : quels vecteurs comparer ?
+# 2. Demander à PostgreSQL les 3 morceaux les plus proches
+lignes = conn.execute(
+    """
+    SELECT fichier, page, contenu, 1 - (vecteur <=> %s) AS score
+    FROM morceaux
+    ORDER BY vecteur <=> %s
+    LIMIT 3
+    """,
+    (vecteur_question, vecteur_question),
+).fetchall()
+conn.close()
 
-# 4. Trier du meilleur au moins bon, et afficher les 3 premiers
-morceaux_tries = sorted(morceaux, key=lambda m: m["score"], reverse=True)
+# 3. Remettre les résultats sous forme de dictionnaires, comme avant
+morceaux_tries = [
+    {"fichier": l[0], "page": l[1], "contenu": l[2], "score": l[3]} for l in lignes
+]
+
 print(f"Question : {question}\n")
-for m in morceaux_tries[:3]:
+for m in morceaux_tries:
     print(f"{m['score']:.3f} | {m['fichier']} (page {m['page']})")
-    print(m["contenu"])
-    print("-" * 40)
-    
 
 import ollama
 
@@ -40,6 +49,7 @@ Extraits :
 Question : {question}"""
 
 # 7. Envoyer le prompt à llama3
-reponse = ollama.chat(model="llama3.2", messages=[{"role": "user", "content": prompt}],options={"num_thread": 4})
 print("\n===== RÉPONSE =====")
-print(reponse["message"]["content"])
+for morceau in ollama.chat(model="llama3.2", messages=[{"role": "user", "content": prompt}], stream=True):
+    print(morceau["message"]["content"], end="", flush=True)
+print()
