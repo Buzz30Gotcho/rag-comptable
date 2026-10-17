@@ -21,3 +21,25 @@ for m in morceaux_tries[:3]:
     print(f"{m['score']:.3f} | {m['fichier']} (page {m['page']})")
     print(m["contenu"])
     print("-" * 40)
+    
+
+import ollama
+
+# 5. Construire le contexte à partir des 3 meilleurs morceaux
+contexte = ""
+for m in morceaux_tries[:3]:
+    contexte += f"[Source : {m['fichier']}, page {m['page']}]\n{m['contenu']}\n\n"
+
+# 6. Construire le prompt
+prompt = f"""Tu es un assistant comptable. Réponds à la question en te basant UNIQUEMENT sur les extraits ci-dessous.
+Cite les sources utilisées (nom du fichier).
+Si les extraits ne permettent pas de répondre, dis-le clairement.
+
+Extraits :
+{contexte}
+Question : {question}"""
+
+# 7. Envoyer le prompt à llama3
+reponse = ollama.chat(model="llama3.2", messages=[{"role": "user", "content": prompt}],options={"num_thread": 4})
+print("\n===== RÉPONSE =====")
+print(reponse["message"]["content"])
