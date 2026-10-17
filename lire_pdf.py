@@ -6,7 +6,6 @@ tous_les_morceaux=[]
 
 # Boucle 1 : pour chaque fichier PDF du dossier data
 for fichier in Path("data").glob("*.pdf"):
-    print(f"===== {fichier.name} =====")
     pdf_reader = PdfReader(fichier)  # on ouvre CE fichier
 
     # Boucle 2 : pour chaque page de ce fichier
